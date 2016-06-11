@@ -29,6 +29,12 @@ GVariant.read('s', [ 0x61, 0x62, 0x63, 0x0 ])
 
 # returns [ true, 42, 'abc' ]
 GVariant.read('(bus)', [ 0x1, 0x0, 0x0, 0x0, 0x2a, 0x0, 0x0, 0x0, 0x61, 0x62, 0x63, 0x0 ])
+
+# returns "abc\x00"
+GVariant.write('s', 'abc')
+
+# return "\u0001\u0000\u0000\u0000*\u0000\u0000\u0000abc\u0000"
+GVariant.write('(bus)', [ true, 42, 'abc' ])
 ```
 
 For more examples, please have a look at the test suite included in this repository.

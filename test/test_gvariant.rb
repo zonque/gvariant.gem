@@ -4,7 +4,8 @@ require 'gvariant'
 class GVariantTest < Minitest::Test
 
   def gvariant_compare(typestr, data, exp)
-    assert_equal(exp, GVariant.read(typestr, data))
+    assert_equal(exp,  GVariant.read(typestr, data))
+    assert_equal(data, GVariant.write(typestr, exp).unpack("C*"))
   end
 
   def test_basic
@@ -102,19 +103,19 @@ class GVariantTest < Minitest::Test
                               [{ abc: { type: 'i', value: 42 }}, { def: { type: 'i', value: 43 }}])
   end
 
-  def test_malformed
-    gvariant_compare('b', [ 0x1, 0x1, 0x1 ], false)
-    gvariant_compare('y', [], 0)
-    gvariant_compare('u', [ 0x00, 0x01 ], 0)
-    gvariant_compare('x', [ 0x0, 0x1, 0x2, 0x3 ], 0)
+  def test_malformed_read
+    assert_equal(false, GVariant.read('b', [ 0x1, 0x1, 0x1 ]))
+    assert_equal(0,     GVariant.read('y', []))
+    assert_equal(0,     GVariant.read('u', [ 0x00, 0x01 ]))
+    assert_equal(0,     GVariant.read('x', [ 0x0, 0x1, 0x2, 0x3 ]))
 
-    gvariant_compare('b', [ 0x2a ], true)
-    gvariant_compare('s', [ 0x61 ], '')
-    gvariant_compare('s', [ 0x61, 0x0, 0x61, 0x0  ], 'a')
+    assert_equal(true,  GVariant.read('b', [ 0x2a ]))
+    assert_equal('',    GVariant.read('s', [ 0x61 ]))
+    assert_equal('a',   GVariant.read('s', [ 0x61, 0x0, 0x61, 0x0  ]))
 
-    gvariant_compare('my', [], nil)
-    gvariant_compare('mu', [ 0x1, 0x2, 0x3, 0x4, 0x5], nil)
-    gvariant_compare('aq', [ 0x1 ], [])
+    assert_equal(nil,   GVariant.read('my', []))
+    assert_equal(nil,   GVariant.read('mu', [ 0x1, 0x2, 0x3, 0x4, 0x5]))
+    assert_equal([],    GVariant.read('aq', [ 0x1 ]))
   end
 
   def test_spec

@@ -2,7 +2,7 @@ class GVariantBasicType
   attr_reader :id, :fixed_size, :default_value, :alignment
 
   def initialize(id, unpack, alignment, fixed_size, default_value)
-    @id, @unpack, @alignment, @fixed_size, @default_value =
+    @id, @pack_format, @alignment, @fixed_size, @default_value =
       id, unpack, alignment, fixed_size, default_value
   end
 
@@ -10,9 +10,20 @@ class GVariantBasicType
     (i + @alignment - 1) & ~(@alignment - 1)
   end
 
+  def pad(buf)
+    l = buf.length
+    (align(l) - l).times do
+      buf.concat(0)
+    end
+  end
+
   def read(buf)
     return @default_value if @fixed_size && buf.length != @fixed_size
-    buf.unpack("#{@unpack}").first
+    buf.unpack(@pack_format).first
+  end
+
+  def write(value)
+    [value || @default_value].pack(@pack_format)
   end
 end
 
@@ -73,6 +84,10 @@ class GVariantBooleanType < GVariantBasicType
     b = super(buf)
     b != false && b != 0
   end
+
+  def write(value)
+    super((value != 0 && value != false && value != nil) ? 1: 0)
+  end
 end
 
 class GVariantStringType < GVariantBasicType
@@ -106,6 +121,16 @@ class GVariantMaybeType < GVariantBasicType
       @element.read(buf[0..l - 1])
     end
   end
+
+  def write(val)
+    if val
+      buf = @element.write(val)
+      buf.concat(0) unless @element.fixed_size
+      buf
+    else
+      ""
+    end
+  end
 end
 
 class GVariantVariantType < GVariantBasicType
@@ -116,6 +141,12 @@ class GVariantVariantType < GVariantBasicType
   def read(buf)
     value, sep, type = buf[0..buf.length - 1].rpartition("\x00")
     { type: type, value: GVariant.read(type, value) }
+  end
+
+  def write(variant)
+    buf = GVariant.write(variant[:type], variant[:value])
+    buf.concat(0)
+    buf << variant[:type]
   end
 end
 
@@ -128,24 +159,47 @@ class GVariantOffsetType < GVariantBasicType
 
   def read_offset(buf, n)
     l = buf.length
+    determine_offset_type(l)
+    buf.unpack("@#{l + @offset_size * n}#{@offset_pack_format}")[0]
+  end
 
+  def write_offsets(buf, offsets)
+    return buf if offsets.empty?
+    offset_size_prev = nil
+    packed_size = 0
+    packed = ""
+
+    loop do
+      determine_offset_type(buf.length + packed_size)
+      break if @offset_size == offset_size_prev
+      offset_size_prev = @offset_size
+
+      packed_size = offsets.count * @offset_size
+      packed = offsets.pack("#{@offset_pack_format}*")
+    end
+
+    buf << packed
+  end
+
+  private
+
+  def determine_offset_type(l)
     if @offset_size.nil?
       if (l < 0xff)
         @offset_size = 1
-        @offset_unpack = 'C'
+        @offset_pack_format = 'C'
       elsif (l <= 0xffff)
         @offset_size = 2
-        @offset_unpack = 'S'
+        @offset_pack_format = 'S'
       elsif (l < 0xffffffff)
         @offset_size = 4
-        @offset_unpack = 'L'
+        @offset_pack_format = 'L'
       else
         raise ArgumentError.new("Offset range too big.")
       end
     end
-
-    buf.unpack("@#{l + @offset_size * n}#{@offset_unpack}")[0]
   end
+
 end
 
 class GVariantDictionaryType < GVariantOffsetType
@@ -176,6 +230,28 @@ class GVariantDictionaryType < GVariantOffsetType
     value = @value_element.read(buf[@value_element.align(key_end)..value_end - 1])
 
     Hash[key, value]
+  end
+
+  def write(vals)
+    buf = ""
+    offsets = []
+
+    vals.each_pair do |key, value|
+      @key_element.pad(buf)
+      buf << @key_element.write(key.to_s)
+      unless @key_element.fixed_size
+        offsets << buf.length
+      end
+
+      @value_element.pad(buf)
+      buf << @value_element.write(value)
+      unless @value_element.fixed_size || key == vals.keys.last
+        offsets << buf.length
+      end
+    end
+
+    write_offsets(buf, offsets)
+    buf
   end
 end
 
@@ -214,6 +290,21 @@ class GVariantArrayType < GVariantOffsetType
     end
 
     values
+  end
+
+  def write(vals)
+    buf = ""
+    offsets = []
+
+    vals.each do |val|
+      v = @element.write(val)
+      @element.pad(buf)
+      buf << v
+      offsets << buf.length
+    end
+
+    write_offsets(buf, offsets) unless @element.fixed_size
+    buf
   end
 end
 
@@ -269,6 +360,27 @@ class GVariantTupleType < GVariantOffsetType
       c = n
       v
     end
+  end
+
+  def write(vals)
+    buf = ""
+    offsets = []
+    o = 0
+    i = 0
+
+    @elements.each do |element|
+      b = element.write(vals[i])
+      element.pad(buf)
+      buf << b
+      i += 1
+
+      o += b.length
+      offsets << o unless element.fixed_size || element == @elements.last
+    end
+
+    pad(buf)
+    write_offsets(buf, offsets)
+    buf
   end
 end
 
@@ -340,11 +452,15 @@ class GVariant
     type
   end
 
-  def self.read(typestr, buffer)
-    buffer = buffer.pack("C*") if buffer.is_a? Array
-    buffer.freeze if RUBY_VERSION >= '2.1.0'
+  def self.read(typestr, buf)
+    buf = buf.pack("C*") if buf.is_a? Array
+    buf.freeze if RUBY_VERSION >= '2.1.0'
     type = parse_type(typestr)
-    type.read(buffer)
+    type.read(buf)
   end
 
+  def self.write(typestr, value)
+    type = parse_type(typestr)
+    type.write(value)
+  end
 end
