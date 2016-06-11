@@ -1,9 +1,9 @@
 class GVariantBasicType
   attr_reader :id, :fixed_size, :default_value, :alignment
 
-  def initialize(id, unpack, alignment, fixed_size, default_value)
+  def initialize(id, pack_format, alignment, fixed_size, default_value)
     @id, @pack_format, @alignment, @fixed_size, @default_value =
-      id, unpack, alignment, fixed_size, default_value
+      id, pack_format, alignment, fixed_size, default_value
   end
 
   def align(i)
