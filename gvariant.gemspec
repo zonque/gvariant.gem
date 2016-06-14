@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = 'gvariant'
-  s.version     = '0.1.0'
-  s.date        = '2016-06-11'
+  s.version     = '0.2.0'
+  s.date        = '2016-06-14'
   s.summary     = 'GVariant reader and writer'
   s.description = 'A simple reader and writer for the GVariant serialization format'
   s.authors     = ["Daniel Mack"]
