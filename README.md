@@ -33,7 +33,7 @@ GVariant.read('(bus)', [ 0x1, 0x0, 0x0, 0x0, 0x2a, 0x0, 0x0, 0x0, 0x61, 0x62, 0x
 # returns "abc\x00"
 GVariant.write('s', 'abc')
 
-# return "\u0001\u0000\u0000\u0000*\u0000\u0000\u0000abc\u0000"
+# returns "\u0001\u0000\u0000\u0000*\u0000\u0000\u0000abc\u0000"
 GVariant.write('(bus)', [ true, 42, 'abc' ])
 ```
 
