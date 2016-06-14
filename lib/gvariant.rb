@@ -226,7 +226,8 @@ class GVariantDictionaryType < GVariantOffsetType
       value_end = buf.length - @offset_size
     end
 
-    key = @key_element.read(buf[0..key_end - 1]).to_sym
+    key = @key_element.read(buf[0..key_end - 1])
+    key = key.to_sym if key.is_a? String
     value = @value_element.read(buf[@value_element.align(key_end)..value_end - 1])
 
     Hash[key, value]
