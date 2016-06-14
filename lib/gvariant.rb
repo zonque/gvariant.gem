@@ -170,7 +170,7 @@ class GVariantOffsetType < GVariantBasicType
     packed = ""
 
     loop do
-      determine_offset_type(buf.length + packed_size)
+      determine_offset_type(buf.length + packed_size, false)
       break if @offset_size == offset_size_prev
       offset_size_prev = @offset_size
 
@@ -183,8 +183,8 @@ class GVariantOffsetType < GVariantBasicType
 
   private
 
-  def determine_offset_type(l)
-    if @offset_size.nil?
+  def determine_offset_type(l, use_cache = true)
+    if @offset_size.nil? || !use_cache
       if (l < 0xff)
         @offset_size = 1
         @offset_pack_format = 'C'
