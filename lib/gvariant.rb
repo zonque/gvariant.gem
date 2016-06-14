@@ -273,7 +273,7 @@ class GVariantArrayType < GVariantOffsetType
     c = 0
 
     if (@element.fixed_size)
-      return [] if (size % @element.fixed_size != 0)
+      return @default_value if (size % @element.fixed_size != 0)
       n = size / @element.fixed_size
 
       n.times do
@@ -443,11 +443,11 @@ class GVariant
     end
   end
 
-  def self.parse_type(str)
-    type = next_type(str, 0)
+  def self.parse_type(typestr)
+    type = next_type(typestr, 0)
 
-    if type.nil? || type.id.length != str.length
-      raise ArgumentError.new("Invalid type string: #{str}")
+    if type.nil? || type.id.length != typestr.length
+      raise ArgumentError.new("Invalid type string: #{typestr}")
     end
 
     type
