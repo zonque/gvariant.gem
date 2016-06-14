@@ -402,7 +402,7 @@ class GVariant
       GVariantUnsignedShortType.new
     when 'i'
       GVariantSignedIntType.new
-    when 'u'
+    when 'u', 'h'
       GVariantUnsignedIntType.new
     when 'x'
       GVariantSignedLongType.new
