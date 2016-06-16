@@ -1,4 +1,5 @@
-# GVariant [![Build Status](https://travis-ci.org/zonque/gvariant.gem.svg?branch=master)](https://travis-ci.org/zonque/gvariant.gem)
+# GVariant
+[![Build Status](https://travis-ci.org/zonque/gvariant.gem.svg?branch=master)](https://travis-ci.org/zonque/gvariant.gem)
 
 ## Introduction
 
